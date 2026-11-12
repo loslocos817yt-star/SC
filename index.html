@@ -83,7 +83,7 @@
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
-        
+
         /* --- GLOBO DE TEXTO BLANCO ESTILO CÓMIC --- */
         #dialogo-box {
             position: absolute;
@@ -101,10 +101,9 @@
             font-weight: bold;
             z-index: 35;
             box-shadow: 0 6px 15px rgba(0,0,0,0.4);
-            display: none; /* Oculto por defecto */
+            display: none;
             pointer-events: none;
         }
-        /* La colita del globo de texto */
         #dialogo-box::after {
             content: '';
             position: absolute;
@@ -131,7 +130,7 @@
             z-index: -1;
         }
 
-        #btn-interactuar {
+        .action-btn {
             position: absolute;
             bottom: 140px;
             left: 50%;
@@ -146,10 +145,11 @@
             z-index: 30;
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            display: none; /* Oculto por defecto hasta acercarse */
+            display: none;
         }
-        #btn-interactuar:active {
-            background: rgba(255, 150, 0, 0.95);
+        #btn-coche {
+            background: rgba(50, 220, 80, 0.95);
+            color: #000;
         }
         .touch-hint {
             position: absolute;
@@ -173,13 +173,13 @@
 </head>
 <body>
 
-    <div id="hud">Insectos: <span id="score">0</span></div>
+    <div id="hud">Insectos: <span id="score">0</span> / 15</div>
     <button id="fullscreen-btn">Pantalla Completa ⛶</button>
-    
-    <!-- GLOBO DE TEXTO Y BOTÓN -->
-    <div id="dialogo-box"><b>Don Pepe:</b> ¿Qué transa, paisano? ¿Listo para cruzar el muro de Cocoyole o qué onda?</div>
-    <button id="btn-interactuar">Hablar con Don Pepe 💬</button>
-    
+
+    <div id="dialogo-box"><b>Don Pepe:</b> Junta 15 insectos y te presto las llaves de la nave para tumbar ese muro.</div>
+    <button id="btn-interactuar" class="action-btn">Hablar con Don Pepe 💬</button>
+    <button id="btn-coche" class="action-btn">Subir al coche y tumbar muro 🛻</button>
+
     <div class="touch-hint">Arrastra la pantalla derecha para mirar alrededor</div>
 
     <div id="joystick-zone">
@@ -214,7 +214,14 @@
         const clock = new THREE.Clock();
 
         // --- GENERAR MUNDO MODULARIZADO ---
-        const { obstaculosColisiones, insectos, crearInsecto, mixersAnimaciones } = generarMundo(scene);
+        const { 
+            obstaculosColisiones, 
+            insectos, 
+            crearInsecto, 
+            mixersAnimaciones, 
+            cocheCtrl, 
+            muroDestructible 
+        } = generarMundo(scene);
 
         const salamandra = crearSalamandra();
         scene.add(salamandra);
@@ -223,8 +230,10 @@
         const joystickZone = document.getElementById('joystick-zone');
         const joystickKnob = document.getElementById('joystick-knob');
         const btnInteractuar = document.getElementById('btn-interactuar');
+        const btnCoche = document.getElementById('btn-coche');
         const dialogoBox = document.getElementById('dialogo-box');
         const posicionPollero = new THREE.Vector3(0, 0, -33.2);
+        const posicionCoche = new THREE.Vector3(4.5, 0, -24);
 
         let joyVector = { x: 0, y: 0 };
         let joystickTouchId = null;
@@ -235,6 +244,11 @@
         let yaw = 0;
         let pitch = 0;
         const maxRadius = 40;
+
+        // Estados de la cinemática del coche
+        let enCinematicaCoche = false;
+        let muroDerribado = false;
+        let velocidadCoche = 0;
 
         window.addEventListener('touchstart', (e) => {
             for (let touch of e.changedTouches) {
@@ -311,26 +325,20 @@
         fsBtn.addEventListener('click', async () => {
             try {
                 const elem = document.documentElement;
-                if (elem.requestFullscreen) {
-                    await elem.requestFullscreen();
-                } else if (elem.webkitRequestFullscreen) {
-                    await elem.webkitRequestFullscreen();
-                }
-
+                if (elem.requestFullscreen) await elem.requestFullscreen();
+                else if (elem.webkitRequestFullscreen) await elem.webkitRequestFullscreen();
                 if (screen.orientation && screen.orientation.lock) {
                     await screen.orientation.lock('landscape').catch(() => {});
                 }
-            } catch (err) {
-                console.log("Modo pantalla completa activado.");
-            }
+            } catch (err) {}
         });
 
-        // --- ACCIÓN AL PRESIONAR EL BOTÓN (CAMBIAR TEXTO DEL GLOBO) ---
+        // --- DIÁLOGO DON PEPE ---
         let turnoDialogo = 0;
         const frasesPollero = [
-            "<b>Don Pepe:</b> ¿Qué transa, paisano? ¿Listo para cruzar el muro de Cocoyole o qué onda?",
-            "<b>Don Pepe:</b> Traigo buen cargamento de contrabando, pero la patrulla anda bien perra hoy.",
-            "<b>Don Pepe:</b> Págate unos insectos o ábrete alv antes de que nos cachen."
+            "<b>Don Pepe:</b> Junta 15 insectos y te presto la nave para tumbar ese pedazo de muro.",
+            "<b>Don Pepe:</b> Ya que tengas los 15, acércate al coche y súbete en chinga.",
+            "<b>Don Pepe:</b> ¡Písale a fondo para abrir el boquete hacia Cocoyole!"
         ];
 
         btnInteractuar.addEventListener('click', () => {
@@ -338,12 +346,35 @@
             dialogoBox.innerHTML = frasesPollero[turnoDialogo];
         });
 
+        // --- ACTIVAR CINEMÁTICA DE SUBIR AL COCHE Y TUMBAR MURO ---
+        btnCoche.addEventListener('click', () => {
+            if (score >= 15 && !enCinematicaCoche && !muroDerribado) {
+                enCinematicaCoche = true;
+                btnCoche.style.display = 'none';
+                btnInteractuar.style.display = 'none';
+                dialogoBox.style.display = 'none';
+
+                // Quitamos la colisión del coche estacionado
+                const idx = obstaculosColisiones.findIndex(o => o.id === 'coche');
+                if (idx !== -1) obstaculosColisiones.splice(idx, 1);
+            }
+        });
+
         // --- COLISIONES BLINDADAS CON MURO FRONTERIZO ---
         const MARGEN_COLISION = 0.3;
 
         function puedeMoverseA(x, z) {
             if (Math.abs(x) > 33 || z > 33) return false;
-            if (z < -33.5) return false;
+
+            // Si el muro NO ha sido derribado, bloquea todo Z < -33.5
+            if (!muroDerribado) {
+                if (z < -33.5) return false;
+            } else {
+                // Si YA se tumbó el muro, permitimos cruzar por el hueco (X entre 1.8 y 7.2)
+                const enHueco = (x > 1.8 && x < 7.2);
+                if (!enHueco && z < -33.5) return false;
+                if (z < -58) return false; // Límite del otro lado de la frontera
+            }
 
             for (let obs of obstaculosColisiones) {
                 const dist = Math.hypot(x - obs.x, z - obs.z);
@@ -358,7 +389,50 @@
         const scoreElement = document.getElementById('score');
         const velocidad = 0.08;
 
+        function actualizarCinematicaCoche() {
+            const coche = cocheCtrl.getMesh();
+            if (!coche) return;
+
+            // Aceleración progresiva hacia el muro (-Z)
+            velocidadCoche += 0.015;
+            coche.position.z -= velocidadCoche;
+
+            // Pegamos la salamandra al techo/asiento del coche
+            salamandra.position.set(coche.position.x, 0.8, coche.position.z);
+
+            // Cámara en tercera persona viendo el madrazo
+            camera.position.set(coche.position.x + 3.5, 3.0, coche.position.z + 6.5);
+            camera.lookAt(coche.position.x, 1.0, coche.position.z - 4);
+
+            // Impacto contra el muro (Z <= -33.5)
+            if (coche.position.z <= -33.5 && !muroDerribado) {
+                muroDerribado = true;
+            }
+
+            // Animar la caída del pedazo de muro derribado
+            if (muroDerribado && muroDestructible.rotation.x > -Math.PI / 2) {
+                muroDestructible.rotation.x -= 0.08;
+                muroDestructible.position.z -= 0.15;
+            }
+
+            // Cuando el coche ya cruzó al otro lado (Z <= -42), bajamos a la salamandra en el hueco
+            if (coche.position.z <= -42) {
+                enCinematicaCoche = false;
+                salamandra.position.set(4.5, 0, -35); // Ya cruzando la frontera
+                yaw = Math.PI; // Mirando hacia el nuevo territorio
+                pitch = 0;
+                dialogoBox.innerHTML = "<b>¡A huevo!</b> Tumbaron el muro. Ya puedes cruzar hacia Cocoyole.";
+                dialogoBox.style.display = 'block';
+                setTimeout(() => { dialogoBox.style.display = 'none'; }, 4000);
+            }
+        }
+
         function updatePlayer() {
+            if (enCinematicaCoche) {
+                actualizarCinematicaCoche();
+                return;
+            }
+
             let moviendose = false;
 
             if (Math.hypot(joyVector.x, joyVector.y) > 0.1) {
@@ -387,14 +461,30 @@
             salamandra.rotation.y = yaw;
             actualizarAnimacion(salamandra, moviendose);
 
-            // --- PROXIMIDAD CON DON PEPE (MOSTRAR / OCULTAR GLOBO Y BOTÓN) ---
+            // --- PROXIMIDAD CON DON PEPE ---
             const distanciaPollero = salamandra.position.distanceTo(posicionPollero);
             if (distanciaPollero < 3.5) {
                 btnInteractuar.style.display = 'block';
                 dialogoBox.style.display = 'block';
+                if (score >= 15 && !muroDerribado) {
+                    dialogoBox.innerHTML = "<b>Don Pepe:</b> ¡Ya juntaste los 15 insectos! Súbete al coche de al lado y dale en su madre al muro.";
+                }
             } else {
                 btnInteractuar.style.display = 'none';
-                dialogoBox.style.display = 'none';
+                if (!muroDerribado) dialogoBox.style.display = 'none';
+            }
+
+            // --- PROXIMIDAD CON EL COCHE (REQUIERE 15 INSECTOS) ---
+            const distanciaCoche = salamandra.position.distanceTo(posicionCoche);
+            if (distanciaCoche < 4.0 && !muroDerribado) {
+                if (score >= 15) {
+                    btnCoche.style.display = 'block';
+                } else {
+                    dialogoBox.innerHTML = `<b>Coche bloqueado:</b> Te faltan ${15 - score} insectos para que Don Pepe te dé las llaves.`;
+                    dialogoBox.style.display = 'block';
+                }
+            } else {
+                btnCoche.style.display = 'none';
             }
 
             const alturaOjos = 1.25;
