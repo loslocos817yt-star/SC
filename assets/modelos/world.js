@@ -5,221 +5,210 @@ import { crearCasa } from './casa.js';
 import { crearMuroFronterizo } from './muro.js';
 import { crearPollero } from './personajes/pollero.js';
 import { crearCoche } from './personajes/coche.js';
+import { crearCohete } from './cohete.js';
 
 export function generarMundo(scene) {
     const obstaculosColisiones = [];
+    const colisionesParcelaNueva = [];
     const posicionesOcupadas = [];
     const insectos = [];
     let mixersAnimaciones = [];
 
+    const mundoPuebloGroup = new THREE.Group();
+    scene.add(mundoPuebloGroup);
+
+    const parcelaNuevaGroup = new THREE.Group();
+    let parcelaActiva = false;
+    const centroX = 6, centroZ = -220;
+
+    const activarParcelaNueva = (cx = centroX, cz = centroZ) => {
+        parcelaNuevaGroup.position.set(0, 0, 0);
+        if (!parcelaActiva) {
+            scene.add(parcelaNuevaGroup);
+            parcelaActiva = true;
+        }
+        sueloParcela.position.set(cx, -0.02, cz);
+    };
+
+    const desactivarParcelaNueva = () => {
+        if (parcelaActiva) {
+            scene.remove(parcelaNuevaGroup);
+            parcelaActiva = false;
+        }
+    };
+
+    let puebloEnEscena = true, bloqueadoPorLejos = false;
+    const descargarPueblo = (lejos = false) => {
+        if (lejos) bloqueadoPorLejos = true;
+        if (puebloEnEscena) { scene.remove(mundoPuebloGroup); puebloEnEscena = false; }
+    };
+    const cargarPueblo = () => {
+        if (!bloqueadoPorLejos && !puebloEnEscena) { scene.add(mundoPuebloGroup); puebloEnEscena = true; }
+    };
+
     const textureLoader = new THREE.TextureLoader();
+    const loadTex = (path, rx, ry) => {
+        const t = textureLoader.load(path, (tex) => {
+            tex.generateMipmaps = false;
+            tex.minFilter = THREE.LinearFilter;
+            tex.magFilter = THREE.NearestFilter;
+        });
+        t.wrapS = t.wrapT = THREE.RepeatWrapping;
+        t.repeat.set(rx, ry);
+        return t;
+    };
 
-    // 1. Suelo (lo extendemos un poco más hacia el norte para poder cruzar)
-    const pastoTexture = textureLoader.load('assets/pasto.png', (tex) => {
-        tex.generateMipmaps = false;
-        tex.minFilter = THREE.LinearFilter;
-        tex.magFilter = THREE.NearestFilter;
-    });
-    pastoTexture.wrapS = THREE.RepeatWrapping;
-    pastoTexture.wrapT = THREE.RepeatWrapping;
-    pastoTexture.repeat.set(35, 50);
-
+    const pastoTexture = loadTex('assets/pasto.png', 60, 120);
     const suelo = new THREE.Mesh(
-        new THREE.PlaneGeometry(70, 100),
-        new THREE.MeshStandardMaterial({ map: pastoTexture, roughness: 0.8 })
+        new THREE.PlaneGeometry(260, 320),
+        new THREE.MeshStandardMaterial({ color: 0x4ea832, map: pastoTexture, roughness: 0.85 })
     );
     suelo.rotation.x = -Math.PI / 2;
-    suelo.position.z = -15;
+    suelo.position.set(0, 0, -110);
     scene.add(suelo);
 
-    // 2. Materiales
-    const ladrilloTexture = textureLoader.load('assets/ladrillo.png', (tex) => {
-        tex.generateMipmaps = false;
-        tex.minFilter = THREE.LinearFilter;
-        tex.magFilter = THREE.NearestFilter;
-    });
-    ladrilloTexture.wrapS = THREE.RepeatWrapping;
-    ladrilloTexture.wrapT = THREE.RepeatWrapping;
-    ladrilloTexture.repeat.set(3, 6);
-    const brickMaterial = new THREE.MeshStandardMaterial({ map: ladrilloTexture, roughness: 0.7 });
+    const sueloParcela = new THREE.Mesh(
+        new THREE.PlaneGeometry(110, 110),
+        new THREE.MeshStandardMaterial({ color: 0xd98a4e, map: pastoTexture, roughness: 0.9 })
+    );
+    sueloParcela.rotation.x = -Math.PI / 2;
+    parcelaNuevaGroup.add(sueloParcela);
 
-    const ladrilloCasasTexture = textureLoader.load('assets/ladrillo_Casas.png', (tex) => {
-        tex.generateMipmaps = false;
-        tex.minFilter = THREE.LinearFilter;
-        tex.magFilter = THREE.NearestFilter;
-    });
-    ladrilloCasasTexture.wrapS = THREE.RepeatWrapping;
-    ladrilloCasasTexture.wrapT = THREE.RepeatWrapping;
-    ladrilloCasasTexture.repeat.set(2, 2);
-    const houseWallMaterial = new THREE.MeshStandardMaterial({ map: ladrilloCasasTexture, roughness: 0.7 });
+    const brickMaterial = new THREE.MeshStandardMaterial({ map: loadTex('assets/ladrillo.png', 3, 6), roughness: 0.7 });
+    const houseWallMaterial = new THREE.MeshStandardMaterial({ map: loadTex('assets/ladrillo_Casas.png', 2, 2), roughness: 0.7 });
+    const roofMaterial = new THREE.MeshStandardMaterial({ map: loadTex('assets/tejado.png', 2, 2), roughness: 0.6 });
 
-    const tejadoTexture = textureLoader.load('assets/tejado.png', (tex) => {
-        tex.generateMipmaps = false;
-        tex.minFilter = THREE.LinearFilter;
-        tex.magFilter = THREE.NearestFilter;
-    });
-    tejadoTexture.wrapS = THREE.RepeatWrapping;
-    tejadoTexture.wrapT = THREE.RepeatWrapping;
-    tejadoTexture.repeat.set(2, 2);
-    const roofMaterial = new THREE.MeshStandardMaterial({ map: tejadoTexture, roughness: 0.6 });
-
-    // 3. Muro Fronterizo Dividido (Para poder tumbar la sección del coche)
-    const muroTexture = textureLoader.load('assets/muro.png', (tex) => {
-        tex.generateMipmaps = false;
-        tex.minFilter = THREE.LinearFilter;
-        tex.magFilter = THREE.NearestFilter;
-    });
-    muroTexture.wrapS = THREE.RepeatWrapping;
-    muroTexture.wrapT = THREE.RepeatWrapping;
-    muroTexture.repeat.set(9, 1);
     const muroMaterial = new THREE.MeshStandardMaterial({
-        map: muroTexture,
-        transparent: true,
-        side: THREE.DoubleSide,
-        roughness: 0.5
+        map: loadTex('assets/muro.png', 12, 1),
+        transparent: true, side: THREE.DoubleSide, roughness: 0.5
     });
 
-    // Muro Izquierdo
-    const muroIzq = crearMuroFronterizo(36.5, muroMaterial);
-    muroIzq.position.set(-16.75, 0, -34);
+    const muroIzq = crearMuroFronterizo(40, muroMaterial);
+    muroIzq.position.set(-18, 0, -34);
     scene.add(muroIzq);
 
-    // Muro Derecho
-    const muroDer = crearMuroFronterizo(27.5, muroMaterial);
-    muroDer.position.set(21.25, 0, -34);
+    const muroDer = crearMuroFronterizo(30, muroMaterial);
+    muroDer.position.set(22.5, 0, -34);
     scene.add(muroDer);
 
-    // SECCIÓN DESTRUCTIBLE (Justo en X = 4.5, ancho 6)
-    const muroDestructibleMat = muroMaterial.clone();
-    const muroDestructible = crearMuroFronterizo(6, muroDestructibleMat);
+    const muroDestructible = crearMuroFronterizo(6, muroMaterial.clone());
     muroDestructible.position.set(4.5, 0, -34);
     scene.add(muroDestructible);
 
-    // --- NPC Y COCHE ---
     crearPollero(scene, textureLoader, mixersAnimaciones, obstaculosColisiones);
     const cocheCtrl = crearCoche(scene, textureLoader, obstaculosColisiones);
+    const coheteCtrl = crearCohete(scene, obstaculosColisiones);
 
-    // 4. Sembrar Edificios
+    const Z_LIMITE_SUR = -31, Z_LIMITE_NORTE = 28;
+
     let intentosEd = 0;
-    while (posicionesOcupadas.length < 5 && intentosEd < 100) {
+    while (posicionesOcupadas.length < 6 && intentosEd < 250) {
         intentosEd++;
-        const ancho = 4 + Math.random() * 2;
-        const alto = 7 + Math.random() * 6;
-        const profundidad = 4 + Math.random() * 2;
-
-        const posX = (Math.random() - 0.5) * 50;
-        const posZ = (Math.random() - 0.5) * 45;
-
-        if (Math.hypot(posX, posZ) < 9.0) continue;
-        if (Math.hypot(posX - 4.5, posZ - (-24)) < 8.0) continue; // No estorbar al coche
-
-        let muyCerca = false;
-        for (let pos of posicionesOcupadas) {
-            if (Math.hypot(posX - pos.x, posZ - pos.z) < 12.0) { muyCerca = true; break; }
-        }
-
-        if (!muyCerca) {
-            posicionesOcupadas.push({ x: posX, z: posZ });
-            const edificio = crearEdificio(ancho, alto, profundidad, brickMaterial);
-            edificio.position.set(posX, 0, posZ);
-            scene.add(edificio);
-
-            obstaculosColisiones.push({
-                x: posX, z: posZ,
-                radio: Math.max(ancho, profundidad) / 2 + 0.6
-            });
-        }
+        const an = 4 + Math.random() * 2, al = 7 + Math.random() * 6, pr = 4 + Math.random() * 2;
+        const px = (Math.random() - 0.5) * 60;
+        const pz = Z_LIMITE_SUR + Math.random() * (Z_LIMITE_NORTE - Z_LIMITE_SUR);
+        if (pz < Z_LIMITE_SUR || Math.hypot(px, pz) < 8) continue;
+        if (posicionesOcupadas.some(p => Math.hypot(px - p.x, pz - p.z) < 12)) continue;
+        posicionesOcupadas.push({ x: px, z: pz });
+        const ed = crearEdificio(an, al, pr, brickMaterial);
+        ed.position.set(px, 0, pz);
+        mundoPuebloGroup.add(ed);
+        obstaculosColisiones.push({ x: px, z: pz, radio: Math.max(an, pr) / 2 + 0.6 });
     }
 
-    // 5. Sembrar Casas
-    let intentosCasas = 0;
-    let casasCreadas = 0;
-    while (casasCreadas < 5 && intentosCasas < 100) {
+    let intentosCasas = 0, casasCreadas = 0;
+    while (casasCreadas < 5 && intentosCasas < 250) {
         intentosCasas++;
-        const anchoCasa = 4.5;
-        const altoParedes = 2.5;
-        const profCasa = 5.0;
-
-        const posX = (Math.random() - 0.5) * 52;
-        const posZ = (Math.random() - 0.5) * 45;
-
-        if (Math.hypot(posX, posZ) < 8.0) continue;
-        if (Math.hypot(posX - 4.5, posZ - (-24)) < 8.0) continue;
-
-        let muyCerca = false;
-        for (let pos of posicionesOcupadas) {
-            if (Math.hypot(posX - pos.x, posZ - pos.z) < 9.0) { muyCerca = true; break; }
-        }
-
-        if (!muyCerca) {
-            casasCreadas++;
-            posicionesOcupadas.push({ x: posX, z: posZ });
-
-            const casa = crearCasa(anchoCasa, altoParedes, profCasa, houseWallMaterial, roofMaterial);
-            casa.position.set(posX, 0, posZ);
-            casa.rotation.y = Math.random() * Math.PI * 2;
-            scene.add(casa);
-
-            obstaculosColisiones.push({
-                x: posX, z: posZ,
-                radio: 3.2
-            });
-        }
+        const px = (Math.random() - 0.5) * 60;
+        const pz = Z_LIMITE_SUR + Math.random() * (Z_LIMITE_NORTE - Z_LIMITE_SUR);
+        if (pz < Z_LIMITE_SUR || Math.hypot(px, pz) < 8) continue;
+        if (posicionesOcupadas.some(p => Math.hypot(px - p.x, pz - p.z) < 10)) continue;
+        casasCreadas++;
+        posicionesOcupadas.push({ x: px, z: pz });
+        const casa = crearCasa(4.5, 2.5, 5, houseWallMaterial, roofMaterial);
+        casa.position.set(px, 0, pz);
+        casa.rotation.y = Math.random() * Math.PI * 2;
+        mundoPuebloGroup.add(casa);
+        obstaculosColisiones.push({ x: px, z: pz, radio: 3.2 });
     }
 
-    // 6. Cargar Árboles (.glb)
+    const coordsParcela = [
+        [-20, -242], [-15, -242], [-10, -242], [-5, -242], [0, -242],
+        [5, -242], [10, -242], [15, -242], [20, -242], [25, -242], [30, -242],
+        [-14, -228], [24, -226], [-12, -210], [22, -208], [-4, -204], [16, -204]
+    ];
+    for (const [ax, az] of coordsParcela) {
+        colisionesParcelaNueva.push({ x: ax, z: az, radio: 2.1 });
+    }
+
+    const crearArbolFallback = (x, z, s) => {
+        const g = new THREE.Group();
+        const tronco = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.25 * s, 0.35 * s, 1.6 * s, 6),
+            new THREE.MeshStandardMaterial({ color: 0x5c3a21 })
+        );
+        tronco.position.y = 0.8 * s;
+        const copa = new THREE.Mesh(
+            new THREE.ConeGeometry(1.3 * s, 3.2 * s, 7),
+            new THREE.MeshStandardMaterial({ color: 0x2d7a28 })
+        );
+        copa.position.y = 2.6 * s;
+        g.add(tronco, copa);
+        g.position.set(x, 0, z);
+        return g;
+    };
+
+    const arbolesParcelaMeshes = [];
+    for (let i = 0; i < coordsParcela.length; i++) {
+        const [ax, az] = coordsParcela[i];
+        const s = i < 11 ? 1.8 : 1.4;
+        const fb = crearArbolFallback(ax, az, s);
+        parcelaNuevaGroup.add(fb);
+        arbolesParcelaMeshes.push({ mesh: fb, x: ax, z: az, scale: s * 3.2 });
+    }
+
     const gltfLoader = new GLTFLoader();
     gltfLoader.load('assets/modelos/small_tree_rt_1.glb', (gltf) => {
-        const treeTemplate = gltf.scene;
-
-        for (let i = 0; i < 18; i++) {
-            const posX = (Math.random() - 0.5) * 60;
-            const posZ = (Math.random() - 0.5) * 55;
-
-            if (Math.hypot(posX, posZ) < 6.0) continue;
-            if (Math.hypot(posX - 4.5, posZ - (-24)) < 7.0) continue;
-
-            let chocaAlgo = false;
-            for (let pos of posicionesOcupadas) {
-                if (Math.hypot(posX - pos.x, posZ - pos.z) < 4.5) { chocaAlgo = true; break; }
-            }
-            if (chocaAlgo) continue;
-
-            const tree = treeTemplate.clone();
-            tree.position.set(posX, 0, posZ);
-            const scale = 4.0 + Math.random() * 3.0;
-            tree.scale.set(scale, scale, scale);
+        const tpl = gltf.scene;
+        let creados = 0, intentos = 0;
+        while (creados < 20 && intentos < 300) {
+            intentos++;
+            const px = (Math.random() - 0.5) * 70;
+            const pz = Z_LIMITE_SUR + Math.random() * (Z_LIMITE_NORTE - Z_LIMITE_SUR);
+            if (pz < Z_LIMITE_SUR || Math.hypot(px, pz) < 6) continue;
+            if (posicionesOcupadas.some(p => Math.hypot(px - p.x, pz - p.z) < 4.5)) continue;
+            const tree = tpl.clone();
+            const sc = 4 + Math.random() * 3;
+            tree.position.set(px, 0, pz);
+            tree.scale.set(sc, sc, sc);
             tree.rotation.y = Math.random() * Math.PI * 2;
+            mundoPuebloGroup.add(tree);
+            creados++;
+            obstaculosColisiones.push({ x: px, z: pz, radio: 1.2 * (sc / 4) });
+        }
 
-            scene.add(tree);
-
-            obstaculosColisiones.push({
-                x: posX, z: posZ,
-                radio: 1.2 * (scale / 4)
-            });
+        for (const item of arbolesParcelaMeshes) {
+            parcelaNuevaGroup.remove(item.mesh);
+            const tree = tpl.clone();
+            tree.position.set(item.x, 0, item.z);
+            tree.scale.set(item.scale, item.scale, item.scale);
+            parcelaNuevaGroup.add(tree);
         }
     });
 
-    // 7. Insectos
     const insectoGeo = new THREE.SphereGeometry(0.15, 8, 8);
     const insectoMat = new THREE.MeshBasicMaterial({ color: 0xffff55 });
-
-    function crearInsecto() {
+    const crearInsecto = () => {
         const ins = new THREE.Mesh(insectoGeo, insectoMat);
-        ins.position.set((Math.random() - 0.5) * 56, 0.2, (Math.random() - 0.5) * 50);
+        ins.position.set((Math.random() - 0.5) * 70, 0.2, (Math.random() - 0.5) * 90 - 15);
         scene.add(ins);
         insectos.push(ins);
-    }
+    };
+    for (let i = 0; i < 30; i++) crearInsecto();
 
-    for (let i = 0; i < 20; i++) crearInsecto();
-
-    return { 
-        obstaculosColisiones, 
-        insectos, 
-        crearInsecto, 
-        mixersAnimaciones, 
-        cocheCtrl, 
-        muroDestructible 
+    return {
+        obstaculosColisiones, colisionesParcelaNueva, insectos, crearInsecto,
+        mixersAnimaciones, cocheCtrl, muroDestructible, coheteCtrl,
+        mundoPuebloGroup, descargarPueblo, cargarPueblo, activarParcelaNueva, desactivarParcelaNueva
     };
 }
-
