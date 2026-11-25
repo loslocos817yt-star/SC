@@ -27,9 +27,9 @@ function generarTexturaPiel() {
 
 export function crearSalamandra() {
     const grupo = new THREE.Group();
-    const mat = new THREE.MeshStandardMaterial({ 
-        map: generarTexturaPiel(), 
-        roughness: 0.6 
+    const mat = new THREE.MeshStandardMaterial({
+        map: generarTexturaPiel(),
+        roughness: 0.6
     });
 
     const escala = 12;
@@ -61,7 +61,12 @@ export function crearSalamandra() {
         colaSegmentos.push(seg);
     }
 
-    grupo.userData = { colaSegmentos, fase: 0, escala };
+    grupo.userData = {
+        colaSegmentos,
+        fase: 0,
+        escala,
+        radioHitbox: 0.14
+    };
     return grupo;
 }
 
@@ -82,4 +87,3 @@ export function actualizarAnimacion(salamandra, moviendose) {
         salamandra.scale.y = 1 + Math.sin(data.fase * 0.3) * 0.005;
     }
 }
-

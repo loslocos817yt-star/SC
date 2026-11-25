@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fin bien pendejo - Salamandra City</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: #140b05;
+      color: #fff2df;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+    #gate {
+      max-width: 440px;
+      width: 100%;
+      background: #241207;
+      border: 3px solid #ff6600;
+      border-radius: 12px;
+      padding: 28px 20px;
+    }
+    #gate h1 {
+      font-size: 1.5rem;
+      color: #ff8833;
+      margin-bottom: 10px;
+    }
+    #gate p {
+      font-size: 0.95rem;
+      margin-bottom: 20px;
+      color: #f3d7b6;
+    }
+    #btn-obligatorio {
+      width: 100%;
+      padding: 14px 18px;
+      font-size: 1rem;
+      font-weight: 800;
+      color: #fff;
+      background: #ff4400;
+      border: 2px solid #fff;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    #err-msg {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: #ff9966;
+      min-height: 1.2em;
+    }
+    #creditos-idiotas {
+      display: none;
+      max-width: 560px;
+      width: 100%;
+      background: #1d0f07;
+      border: 2px dashed #ff7722;
+      border-radius: 12px;
+      padding: 26px 20px;
+    }
+    #creditos-idiotas h2 {
+      font-size: 1.6rem;
+      color: #ff8833;
+      margin-bottom: 6px;
+    }
+    .sub {
+      font-size: 0.85rem;
+      color: #d9b58f;
+      margin-bottom: 20px;
+    }
+    .lista {
+      list-style: none;
+      display: grid;
+      gap: 12px;
+      margin-bottom: 22px;
+      font-size: 0.98rem;
+    }
+    .lista b {
+      display: block;
+      font-size: 0.72rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #ff9944;
+    }
+    .controles {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    button.sec, a.sec {
+      padding: 9px 14px;
+      border-radius: 8px;
+      border: 1px solid #ff8833;
+      background: #33180a;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-decoration: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="gate">
+    <h1>ALTO AHÍ, ANIMAL</h1>
+    <p>Obligatorio darle play a <b>California — Los Vaguens</b> o no ves ni madres de los créditos.</p>
+    <button id="btn-obligatorio" type="button">DALE PLAY A CALIFORNIA Y SUELTA LA BASURA</button>
+    <div id="err-msg"></div>
+  </div>
+
+  <div id="creditos-idiotas">
+    <h2>CRÉDITOS BIEN IDIOTAS</h2>
+    <p class="sub">Sonando a huevo: California — Los Vaguens</p>
+
+    <ul class="lista">
+      <li><b>Programador principal</b>Insano de carton_MC</li>
+      <li><b>Assets</b>Tiny texture pack 1 de Brain Studios<br>Tiny texture pack 2 de Brain Studios<br>Characters PSX de Elbolilloduro</li>
+      <li><b>La salamandra</b>Una lagartija con cuello que no sabe girar a la derecha a la primera</li>
+      <li><b>Don Pepe</b>El señor que junta bichos y presta carros sin seguro</li>
+      <li><b>El cohete</b>Te sube, hace picada y te deja estrellado chueco entre árboles</li>
+      <li><b>El pasto verde</b>Ahí nomás viendo cómo te frenan los troncos</li>
+      <li><b>Agradecimientos</b>A nadie en especial, pero qué bueno que llegaste</li>
+    </ul>
+
+    <div class="controles">
+      <button class="sec" id="btn-toggle" type="button">Pausar / Reproducir rola</button>
+      <a class="sec" href="index.html">Regresar al desmadre</a>
+    </div>
+  </div>
+
+  <audio id="rola" src="assets/california.aac" loop preload="auto"></audio>
+
+  <script>
+    const rola = document.getElementById('rola');
+    const gate = document.getElementById('gate');
+    const creditos = document.getElementById('creditos-idiotas');
+    const btnObligatorio = document.getElementById('btn-obligatorio');
+    const btnToggle = document.getElementById('btn-toggle');
+    const errMsg = document.getElementById('err-msg');
+
+    btnObligatorio.addEventListener('click', async () => {
+      errMsg.textContent = '';
+      try {
+        await rola.play();
+        gate.style.display = 'none';
+        creditos.style.display = 'block';
+      } catch (_) {
+        errMsg.textContent = 'No quiso arrancar el audio: checa que exista assets/california.aac o vuelve a picarle.';
+      }
+    });
+
+    btnToggle.addEventListener('click', async () => {
+      if (rola.paused) {
+        await rola.play().catch(() => {});
+      } else {
+        rola.pause();
+      }
+    });
+  </script>
+</body>
+</html>
