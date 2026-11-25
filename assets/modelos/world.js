@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { crearEdificio } from './edificio.js';
 import { crearCasa } from './casa.js';
-import { crearMuroFronterizo } from './muro.js';
+import { crearMuroFronterizo } from './muroFronterizo.js';
 import { crearPollero } from './personajes/pollero.js';
 import { crearCoche } from './personajes/coche.js';
 import { crearCohete } from './cohete.js';
@@ -78,20 +78,38 @@ export function generarMundo(scene) {
     const houseWallMaterial = new THREE.MeshStandardMaterial({ map: loadTex('assets/ladrillo_Casas.png', 2, 2), roughness: 0.7 });
     const roofMaterial = new THREE.MeshStandardMaterial({ map: loadTex('assets/tejado.png', 2, 2), roughness: 0.6 });
 
-    const muroMaterial = new THREE.MeshStandardMaterial({
-        map: loadTex('assets/muro.png', 12, 1),
+    // muroDestructible ocupa x: [1.5 .. 7.5] (ancho 6 centrado en 4.5)
+    // Extendido a [-2000 .. 1.5] a la izquierda y [7.5 .. +2000] a la derecha
+    const ANCHO_EXTREMO = 2000;
+    const anchoIzq = 1.5 - (-ANCHO_EXTREMO);
+    const centroIzq = (-ANCHO_EXTREMO + 1.5) / 2;
+    const anchoDer = ANCHO_EXTREMO - 7.5;
+    const centroDer = (7.5 + ANCHO_EXTREMO) / 2;
+
+    const muroIzqMat = new THREE.MeshStandardMaterial({
+        map: loadTex('assets/muro.png', Math.round(anchoIzq / 3), 1),
         transparent: true, side: THREE.DoubleSide, roughness: 0.5
     });
 
-    const muroIzq = crearMuroFronterizo(40, muroMaterial);
-    muroIzq.position.set(-18, 0, -34);
+    const muroDerMat = new THREE.MeshStandardMaterial({
+        map: loadTex('assets/muro.png', Math.round(anchoDer / 3), 1),
+        transparent: true, side: THREE.DoubleSide, roughness: 0.5
+    });
+
+    const muroDestMat = new THREE.MeshStandardMaterial({
+        map: loadTex('assets/muro.png', 4, 1),
+        transparent: true, side: THREE.DoubleSide, roughness: 0.5
+    });
+
+    const muroIzq = crearMuroFronterizo(anchoIzq, muroIzqMat, 0);
+    muroIzq.position.set(centroIzq, 0, -34);
     scene.add(muroIzq);
 
-    const muroDer = crearMuroFronterizo(30, muroMaterial);
-    muroDer.position.set(22.5, 0, -34);
+    const muroDer = crearMuroFronterizo(anchoDer, muroDerMat, 0);
+    muroDer.position.set(centroDer, 0, -34);
     scene.add(muroDer);
 
-    const muroDestructible = crearMuroFronterizo(6, muroMaterial.clone());
+    const muroDestructible = crearMuroFronterizo(6, muroDestMat, 0);
     muroDestructible.position.set(4.5, 0, -34);
     scene.add(muroDestructible);
 

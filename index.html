@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Salamandra City - El Cruce de Cocoyole</title>
+    <title>Salamandra City </title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,6 @@
             box-sizing: border-box;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: none;
         }
         body, html {
             width: 100%;
@@ -21,8 +20,123 @@
             height: 100dvh;
             overflow: hidden;
             background-color: #ff7722;
-            font-family: system-ui, -apple-system, sans-serif;
+            font-family: "Courier New", Courier, monospace;
+            touch-action: none;
         }
+
+        /* --- PANTALLA DE INICIO RETRO PS1 --- */
+        #menu-pantalla {
+            position: fixed;
+            inset: 0;
+            background: #040406;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            touch-action: manipulation;
+        }
+        #logo-gta {
+            text-align: center;
+            opacity: 0;
+            animation: aparecerLogoPS1 1.3s steps(12, end) forwards;
+            margin-bottom: 18px;
+            border-top: 2px solid #ff1493;
+            border-bottom: 2px solid #ff1493;
+            padding: 10px 18px;
+            background: #0b070c;
+        }
+        #logo-gta .titulo {
+            font-size: clamp(1.7rem, 6.5vw, 3.3rem);
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #ff66c4;
+            text-shadow:
+                2px 2px 0px #8a004b,
+                4px 4px 0px #2b0017;
+        }
+        #logo-gta .subtitulo {
+            margin-top: 4px;
+            font-size: clamp(0.7rem, 2.4vw, 0.95rem);
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #d8c8d2;
+        }
+        #aviso-fullscreen {
+            width: 100%;
+            max-width: 380px;
+            margin-bottom: 14px;
+            padding: 8px 10px;
+            border: 2px solid #888899;
+            background: #101018;
+            color: #e6e6f0;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: center;
+        }
+        #aviso-fullscreen.listo {
+            border-color: #39d97a;
+            background: #0a1b12;
+            color: #9effc7;
+        }
+        .menu-botones {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            max-width: 310px;
+            border: 2px solid #666677;
+            background: #0d0d14;
+            padding: 10px;
+        }
+        .menu-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 10px 12px;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 14px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-align: left;
+            cursor: pointer;
+            border: 1px solid #3a3a4d;
+            background: #14141f;
+            color: #d0d0e0;
+            touch-action: manipulation;
+        }
+        .menu-btn .cursor-ps1 {
+            color: #ff4db8;
+            font-weight: 900;
+            min-width: 22px;
+            opacity: 0;
+        }
+        .menu-btn:hover:not(:disabled) .cursor-ps1,
+        .menu-btn:focus:not(:disabled) .cursor-ps1,
+        .menu-btn.activo:not(:disabled) .cursor-ps1 {
+            opacity: 1;
+        }
+        .menu-btn:hover:not(:disabled),
+        .menu-btn:focus:not(:disabled),
+        .menu-btn.activo:not(:disabled) {
+            background: #221224;
+            border-color: #ff4db8;
+            color: #ffffff;
+        }
+        .menu-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+        @keyframes aparecerLogoPS1 {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
         #canvas-container {
             width: 100%;
             height: 100%;
@@ -54,7 +168,6 @@
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             z-index: 20;
-            touch-action: none;
         }
         #joystick-knob {
             position: absolute;
@@ -76,12 +189,11 @@
             color: #fff;
             border: 1px solid rgba(255, 255, 255, 0.5);
             padding: 10px 16px;
-            border-radius: 10px;
-            font-size: 15px;
+            border-radius: 4px;
+            font-size: 14px;
             font-weight: bold;
             z-index: 30;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
 
         /* --- GLOBO DE TEXTO BLANCO ESTILO CÓMIC --- */
@@ -173,12 +285,34 @@
 </head>
 <body>
 
+    <div id="menu-pantalla">
+        <div id="logo-gta">
+            <div class="titulo">SALAMANDRA CITY</div>
+            <div class="subtitulo">Trump me la come</div>
+        </div>
+        <div id="aviso-fullscreen">AVISO: PON PANTALLA COMPLETA Y HORIZONTAL.</div>
+        <div class="menu-botones">
+            <button type="button" id="btn-pedir-full" class="menu-btn activo">
+                <span class="cursor-ps1">&gt;&gt;</span>
+                <span>PANTALLA COMPLETA</span>
+            </button>
+            <button type="button" id="btn-continuar" class="menu-btn">
+                <span class="cursor-ps1">&gt;&gt;</span>
+                <span>CONTINUAR PARTIDA</span>
+            </button>
+            <button type="button" id="btn-nueva-partida" class="menu-btn">
+                <span class="cursor-ps1">&gt;&gt;</span>
+                <span>NUEVA PARTIDA</span>
+            </button>
+        </div>
+    </div>
+
     <div id="hud">Insectos: <span id="score">0</span> / 15</div>
-    <button id="fullscreen-btn">Pantalla Completa ⛶</button>
+    <button type="button" id="fullscreen-btn">Pantalla Completa ⛶</button>
 
     <div id="dialogo-box"><b>Don Pepe:</b> Junta 15 insectos y te presto las llaves de la nave para tumbar ese muro.</div>
-    <button id="btn-interactuar" class="action-btn">Hablar con Don Pepe 💬</button>
-    <button id="btn-coche" class="action-btn">Subir al coche y tumbar muro 🛻</button>
+    <button type="button" id="btn-interactuar" class="action-btn">Hablar con Don Pepe 💬</button>
+    <button type="button" id="btn-coche" class="action-btn">Subir al coche y tumbar muro 🛻</button>
 
     <div class="touch-hint">Arrastra la pantalla derecha para mirar alrededor</div>
 
@@ -188,8 +322,100 @@
 
     <div id="canvas-container"></div>
 
+    <script>
+        (function () {
+            const SAVE_KEY = 'salamandra_city_save_v1';
+            const NUEVA_KEY = 'salamandra_nueva_partida';
+            const menu = document.getElementById('menu-pantalla');
+            const aviso = document.getElementById('aviso-fullscreen');
+            const btnPedirFull = document.getElementById('btn-pedir-full');
+            const btnContinuar = document.getElementById('btn-continuar');
+            const btnNueva = document.getElementById('btn-nueva-partida');
+            const botones = [btnPedirFull, btnContinuar, btnNueva];
+
+            let haySave = false;
+            try { haySave = Boolean(localStorage.getItem(SAVE_KEY)); } catch (_) {}
+            btnContinuar.disabled = !haySave;
+
+            function marcarActivo(btn) {
+                if (!btn || btn.disabled) return;
+                botones.forEach(b => b.classList.remove('activo'));
+                btn.classList.add('activo');
+            }
+
+            botones.forEach(btn => {
+                btn.addEventListener('pointerenter', () => marcarActivo(btn));
+                btn.addEventListener('pointerdown', () => marcarActivo(btn), { passive: true });
+                btn.addEventListener('focus', () => marcarActivo(btn));
+            });
+
+            function estaEnFullscreen() {
+                return Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+            }
+
+            function refrescarEstadoFull() {
+                if (estaEnFullscreen()) {
+                    aviso.classList.add('listo');
+                    aviso.innerText = 'PANTALLA COMPLETA ACTIVA.';
+                    btnPedirFull.style.display = 'none';
+                    marcarActivo(haySave ? btnContinuar : btnNueva);
+                } else {
+                    aviso.classList.remove('listo');
+                    aviso.innerText = 'AVISO: ACTIVA PANTALLA COMPLETA Y HORIZONTAL.';
+                    btnPedirFull.style.display = 'flex';
+                    marcarActivo(btnPedirFull);
+                }
+            }
+
+            function dispararFullYHorizontal() {
+                try {
+                    const el = document.documentElement;
+                    if (!estaEnFullscreen()) {
+                        if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+                        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+                    }
+                } catch (_) {}
+                try {
+                    if (screen.orientation && screen.orientation.lock) {
+                        screen.orientation.lock('landscape').catch(() => {});
+                    }
+                } catch (_) {}
+                setTimeout(refrescarEstadoFull, 120);
+            }
+
+            function quitarMenuYa() {
+                if (menu && menu.parentNode) menu.parentNode.removeChild(menu);
+            }
+
+            document.addEventListener('fullscreenchange', refrescarEstadoFull);
+            document.addEventListener('webkitfullscreenchange', refrescarEstadoFull);
+            refrescarEstadoFull();
+
+            btnPedirFull.addEventListener('click', dispararFullYHorizontal);
+
+            btnContinuar.addEventListener('click', () => {
+                let tiene = false;
+                try { tiene = Boolean(localStorage.getItem(SAVE_KEY)); } catch (_) {}
+                if (!tiene) return;
+                dispararFullYHorizontal();
+                quitarMenuYa();
+            });
+
+            btnNueva.addEventListener('click', () => {
+                dispararFullYHorizontal();
+                try {
+                    localStorage.removeItem(SAVE_KEY);
+                    sessionStorage.setItem(NUEVA_KEY, '1');
+                } catch (_) {}
+                const sc = document.getElementById('score');
+                if (sc) sc.innerText = '0';
+                quitarMenuYa();
+                try { location.reload(); } catch (_) {}
+            });
+        })();
+    </script>
+
     <!-- CARGAMOS EL JUEGO DESDE EL MÓDULO EXTERNO -->
     <script type="module" src="./assets/modelos/main.js"></script>
 </body>
 </html>
-

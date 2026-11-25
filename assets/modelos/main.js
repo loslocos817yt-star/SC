@@ -102,6 +102,12 @@ function guardarSave() {
 
 function cargarSave() {
     try {
+        const esNueva = sessionStorage.getItem('salamandra_nueva_partida') === '1' || location.search.includes('nueva=');
+        if (esNueva) {
+            sessionStorage.removeItem('salamandra_nueva_partida');
+            localStorage.removeItem(SAVE_KEY);
+            return;
+        }
         const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
         if (!d || typeof d.x !== 'number' || typeof d.z !== 'number') return;
         if (typeof d.score === 'number') { score = d.score; if (scoreElement) scoreElement.innerText = score; }
